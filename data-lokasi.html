@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>WebGIS Infrastruktur Desa</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        header {
+            background: #3a86ff;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        nav {
+            background: #264653;
+            padding: 0.5rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            background: #457b9d;
+            border-radius: 5px;
+        }
+        nav a:hover {
+            background: #2a9d8f;
+        }
+        #map {
+            height: calc(100vh - 130px);
+            width: 100%;
+        }
+        footer {
+            text-align: center;
+            padding: 1rem;
+            background: #eee;
+        }
+        img { 
+            width: 100px; 
+            height: auto;
+            object-fit: cover;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-edit { background-color: gold; color: black; }
+        .btn-delete { background-color: crimson; color: white; }
+        .modal-img {
+            max-width: 100%;
+            max-height: 300px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h2>WebGIS Infrastruktur Desa Purwosari Baru</h2>
+</header>
+
+<nav>
+    <a href="data-lokasi.html">Data Lokasi</a>
+    <a href="index.html">Peta Kondisi Infrastruktur</a>
+    <a href="config.html">Peta Digital</a>
+</nav>
+
+<div class="container mt-4">
+  <h2>Data Lokasi Infrastruktur</h2>
+  <table id="lokasiTable" class="display table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama Infrastruktur</th>
+        <th>Alamat</th>
+        <th>Koordinat</th>
+        <th>Kondisi</th>
+        <th>Keterangan</th>
+        <th>Foto</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+    <tbody id="data-body"></tbody>
+  </table>
+</div>
+
+<footer>&copy; 2025 Pemerintah Desa Purwosari Baru</footer>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    $.getJSON("data.php", function(data) {
+        dataFitur = data.features;
+        
+        let no = 1;
+        data.features.forEach(f => {
+            const p = f.properties;
+            const c = f.geometry.coordinates;
+            
+            // Cari nomor foto berdasarkan ID atau urutan
+            const fotoName = p.nama.toLowerCase()
+                .replace(/ /g, '_')
+                .replace(/[^\w-]/g, '') + '.jpg';
+            const fotoPath = `img/${fotoName}`;
+            
+            const row = `
+                <tr>
+                    <td>${no++}</td>
+                    <td>${p.nama}</td>
+                    <td>${p.alamat}</td>
+                    <td>${c[1]}, ${c[0]}</td>
+                    <td>${p.kondisi}</td>
+                    <td>${p.keterangan}</td>
+                    <td>
+                        <img src="${fotoPath}" 
+                             onerror="this.src='img/default.jpg'; console.error('Gambar tidak ditemukan: ${fotoPath}')"
+                             data-bs-toggle="modal" 
+                             data-bs-target="#fotoModal"
+                             onclick="$('#modalFoto').attr('src', '${fotoPath}')"
+                             style="cursor: pointer">
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-edit" onclick="editData('${p.nama}')">Edit</button>
+                        <button class="btn btn-sm btn-delete" onclick="hapusData('${p.nama}')">Hapus</button>
+                    </td>
+                </tr>`;
+            $('#data-body').append(row);
+        });
+        
+        $('#lokasiTable').DataTable({
+            responsive: true,
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/id.json'
+            }
+        });
+    }).fail(function() {
+        console.error("Gagal memuat data");
+        alert("Gagal memuat data. Lihat konsol untuk detail.");
+    });
+});
+
+function editData(nama) {
+    const feature = dataFitur.find(f => f.properties.nama === nama);
+    if (!feature) return alert("Data tidak ditemukan!");
+
+    const p = feature.properties;
+    const c = feature.geometry.coordinates;
+    
+    // Format nama file untuk preview
+    const fotoName = p.nama.toLowerCase()
+        .replace(/ /g, '_')
+        .replace(/[^\w-]/g, '') + '.jpg';
+    const fotoPath = `img/${fotoName}`;
+
+    $('#edit_nama_lama').val(p.nama);
+    $('#edit_nama').val(p.nama);
+    $('#edit_alamat').val(p.alamat);
+    $('#edit_lat').val(c[1]);
+    $('#edit_lng').val(c[0]);
+    $('#edit_kondisi').val(p.kondisi);
+    $('#edit_keterangan').val(p.keterangan);
+    $('#edit_foto_preview').attr('src', fotoPath);
+
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+    modal.show();
+}
+
+function hapusData(nama) {
+    if (confirm(`Yakin ingin menghapus data: ${nama}?`)) {
+        fetch('hapus.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'nama=' + encodeURIComponent(nama)
+        }).then(res => {
+            if (res.ok) location.reload();
+            else alert("Gagal menghapus data.");
+        });
+    }
+}
+
+$('#formEdit').on('submit', function(e) {
+    e.preventDefault();
+    $.ajax({
+        url: 'edit.php',
+        type: 'POST',
+        data: new FormData(this),
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            alert("Data berhasil diupdate");
+            location.reload();
+        },
+        error: function() {
+            alert("Gagal memperbarui data");
+        }
+    });
+});
+</script>
+
+<!-- Modal Foto -->
+<div class="modal fade" id="fotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Foto Infrastruktur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalFoto" class="modal-img" src="" alt="Foto Infrastruktur">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="formEdit" class="modal-content" enctype="multipart/form-data">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Data Infrastruktur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" name="nama_lama" id="edit_nama_lama">
+                <div class="mb-3">
+                    <label class="form-label">Foto Saat Ini</label>
+                    <img id="edit_foto_preview" src="" class="modal-img" onerror="this.src='https:/via.placeholder.com/300?text=Tidak+Ada+Foto'">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ubah Foto</label>
+                    <input type="file" class="form-control" name="foto" accept="image/*">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Nama</label>
+                    <input class="form-control" name="nama" id="edit_nama" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Alamat</label>
+                    <input class="form-control" name="alamat" id="edit_alamat" required>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Latitude</label>
+                        <input class="form-control" name="latitude" id="edit_lat" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Longitude</label>
+                        <input class="form-control" name="longitude" id="edit_lng" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Kondisi</label>
+                    <select class="form-control" name="kondisi" id="edit_kondisi" required>
+                        <option value="Baik">Baik</option>
+                        <option value="Sedang">Sedang</option>
+                        <option value="Rusak Ringan">Rusak Ringan</option>
+                        <option value="Rusak Berat">Rusak Berat</option>
+                        <option value="Tidak layak">Tidak layak</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Keterangan</label>
+                    <textarea class="form-control" name="keterangan" id="edit_keterangan" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
