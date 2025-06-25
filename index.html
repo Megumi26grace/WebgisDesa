@@ -45,6 +45,7 @@
             background: #eee;
         }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-minimap/dist/Control.MiniMap.min.css" />
 </head>
 <body>
 
@@ -57,190 +58,134 @@
     <a href="index.html">Peta Kondisi Infrastruktur</a>
     <a href="config.html">Peta Digital</a>
 </nav>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script>
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+    var osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png');
+    var stadia = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png');
+    var esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
 
-<div id="map"></div>
-
-<footer>&copy; 2025 Pemerintah Desa Purwosari Baru</footer>
-
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-<script src="https://unpkg.com/leaflet-search@2.9.8/dist/leaflet-search.src.js"></script>
-
-<script>
-    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    var map = L.map('map', {
+      center: [-3.34, 114.47],
+      zoom: 14,
+      layers: [osm]
     });
 
-    var osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
-    });
-
-    var stadiaOutdoors = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors'
-    });
-
-    var esriSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri'
-    });
-    
-    var topografi = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-    });
-
-    var map = L.map('map').setView([-3.3476300515425685, 114.47057026684308], 15);
-    osm.addTo(map);
-
-    const baseLayers = {
-        'OpenStreetMap': osm,
-        'Humanitarian OSM': osmHot,
-        'Outdoors (Stadia)': stadiaOutdoors,
-        'Satellite (Esri)': esriSatellite,
-        'Topografi': topografi
+    var baseLayers = {
+      "OpenStreetMap": osm,
+      "Humanitarian OSM": osmHot,
+      "Stadia Outdoors": stadia,
+      "Esri Satellite": esri,
+      "OpenTopoMap": topo
     };
 
-    var kelompokLayer = {
-        Baik: L.layerGroup(),
-        Sedang: L.layerGroup(),
-        Rusak_Ringan: L.layerGroup(),
-        Rusak_Berat: L.layerGroup(),
-        Tidak_layak: L.layerGroup()
+    var kondisiLayers = {
+      "Baik": L.layerGroup().addTo(map),
+      "Sedang": L.layerGroup().addTo(map),
+      "Rusak Ringan": L.layerGroup().addTo(map),
+      "Rusak Berat": L.layerGroup().addTo(map),
+      "Tidak layak": L.layerGroup().addTo(map)
     };
-
-    // Tambahkan semua layer group ke map
-    for (var key in kelompokLayer) {
-        kelompokLayer[key].addTo(map);
-    }
 
     var geojsonLayer = L.geoJSON(null, {
-    onEachFeature: function (feature, layer) {
-        
-    var props = feature.properties;
-       const namaFile = props.nama.toLowerCase()
-        .replace(/ /g, '_')
-        .replace(/[^\w-]/g, '') + '.jpg';
-    const fotoUrl = `img/${namaFile}`;      
-   //const timestamp = new Date().getTime();
-   // const fotoUrl = `${props.foto}?t=${timestamp}`;
-   // const defaultImg = 'img/default.jpg';
-    
-    // Buat elemen img terpisah untuk kontrol lebih baik
-    const imgElement = document.createElement('img');
-    imgElement.src = fotoUrl;
-    imgElement.style.maxWidth = '100%';
-    imgElement.style.maxHeight = '150px';
-    imgElement.style.borderRadius = '4px';
-    imgElement.alt = `Foto ${props.nama}`;
-    
-    // Fungsi untuk handle error
-    imgElement.onerror = function() {
-        this.src = 'img/default.jpg';
-        console.error(`Gagal memuat: ${fotoUrl}`);
-    };
-    
-    // Buat div container untuk gambar
-    const imgContainer = document.createElement('div');
-    imgContainer.style.marginTop = '10px';
-    imgContainer.style.textAlign = 'center';
-    imgContainer.style.minHeight = '150px';
-    imgContainer.appendChild(imgElement);
-    
-    // Buat konten popup
-    const popupContent = document.createElement('div');
-    popupContent.style.maxWidth = '300px';
-    popupContent.innerHTML = `
-        <h4 style="margin-bottom: 5px;">${props.nama}</h4>
-        <p><strong>Kondisi:</strong> ${props.kondisi}</p>
-        <p><strong>Alamat:</strong> ${props.alamat}</p>
-    `;
-    popupContent.appendChild(imgContainer);
-    
-    // Debugging intensif
-    console.log(`Mencoba memuat gambar: ${fotoUrl}`);
-    fetch(fotoUrl)
-        .then(response => {
-            if (!response.ok) {
-                console.warn(`Gambar tidak ditemukan (${response.status}): ${fotoUrl}`);
-            } else {
-                console.log(`Gambar berhasil ditemukan: ${fotoUrl}`);
-            }
-        })
-        .catch(error => console.error(`Error saat memeriksa gambar: ${fotoUrl}`, error));
-    
-    layer.bindPopup(popupContent);
-    
-    // Debugging
-    fetch(fotoUrl)
-        .then(response => {
-            if (!response.ok) {
-                console.warn(`Gambar tidak ditemukan: ${fotoUrl}`);
-            }
-        });
-    var kondisi = props.kondisi.replace(/\s+/g, '_');
-    if (kelompokLayer[kondisi]) {
-        kelompokLayer[kondisi].addLayer(layer);
+      onEachFeature: function(feature, layer) {
+        const p = feature.properties;
+        const kategori = p.kondisi;
+        const foto = encodeURIComponent(p.foto || '');
+        const popup = `
+          <strong>${p.nama}</strong><br/>
+          <em>${kategori}</em><br/>
+          ${p.keterangan}<br/>
+          <small>${p.alamat}</small><br/>
+          <img src='img/${foto}' width='200' onerror="this.src='https://via.placeholder.com/200x120?text=No+Image'">
+        `;
+        layer.bindPopup(popup);
+        if (kategori && kondisiLayers[kategori]) {
+          kondisiLayers[kategori].addLayer(layer);
+        }
+      },
+ pointToLayer: function (feature, latlng) {
+    const kondisi = feature.properties.kondisi.trim();
+    let warna;
+
+    switch (kondisi) {
+      case "Baik":
+        warna = "#28a745"; // Hijau
+        break;
+      case "Sedang":
+        warna = "#ffc107"; // Kuning
+        break;
+      case "Rusak Ringan":
+        warna = "#fd7e14"; // Oranye
+        break;
+      case "Rusak Berat":
+        warna = "#dc3545"; // Merah
+        break;
+      case "Tidak layak":
+        warna = "#6c757d"; // Abu-abu
+        break;
+      default:
+        warna = "#007bff"; // Biru (default)
     }
-},
-
-        
-        pointToLayer: function(feature, latlng) {
-            var color;
-            switch(feature.properties.kondisi) {
-                case 'Baik': color = 'green'; break;
-                case 'Sedang': color = 'orange'; break;
-                case 'Rusak Ringan': color = 'gold'; break;
-                case 'Rusak Berat': color = 'goldenrod'; break;
-                case 'Tidak layak': color = 'red'; break;
-                default: color = 'blue';
-            }
-
-            return L.circleMarker(latlng, {
-                radius: 8,
-                fillColor: color,
-                color: '#000',
-                weight: 1,
-                opacity: 1,
-                fillOpacity: 0.8
-            });
-        }
-    });
-
-    fetch('data.php')
-        .then(res => res.json())
-        .then(data => {
-            console.log("Data diterima:", data);
-            geojsonLayer.addData(data);
-            
-            // Debug path gambar
-            data.features.forEach(f => {
-                const fotoPath = `img/${f.properties.id}.jpg`;
-                console.log(`Mencoba mengakses: ${fotoPath}`);
-                fetch(fotoPath)
-                    .then(r => console.log(`Status gambar ${fotoPath}:`, r.ok ? "OK" : "Tidak ditemukan"))
-                    .catch(e => console.error("Error:", e));
-            });
-        })
-        .catch(err => {
-            console.error('Error loading data:', err);
-            alert("Gagal memuat data. Lihat konsol untuk detail.");
+        return L.circleMarker(latlng, {
+          radius: 8,
+          fillColor: warna,
+          color: '#000',
+          weight: 1,
+          opacity: 1,
+          fillOpacity: 0.8
         });
-        
-    L.Control.geocoder().addTo(map);
-
-    var searchControl = new L.Control.Search({
-        layer: geojsonLayer,
-        propertyName: 'nama',
-        marker: false,
-        moveToLocation: function(latlng, map) {
-            map.setView(latlng, 17);
-        }
+      }
     });
-    map.addControl(searchControl);
 
-    L.control.layers(baseLayers, kelompokLayer).addTo(map);
+    fetch('data/infrastruktur.geojson')
+      .then(res => res.json())
+      .then(data => geojsonLayer.addData(data));
+
+    
+      const batasRTLayers = [];
+
+for (let i = 1; i <= 12; i++) {
+  const no = String(i).padStart(3, '0'); // 001, 002, dst
+  fetch(`batasrt/RT${no}.geojson`)
+    .then(res => res.json())
+    .then(data => {
+      const layer = L.geoJSON(data, {
+        style: {
+          color: "#0000ff",
+          weight: 2,
+          fillOpacity: 0.05
+        },
+        onEachFeature: function (feature, layer) {
+          const nama = feature.properties.nama || `RT ${no}`;
+          layer.bindPopup(`<b>${nama}</b>`);
+        }
+      }).addTo(map);
+      batasRTLayers.push(layer);
+    });
+}
+
+
+
+    L.control.layers(baseLayers, kondisiLayers).addTo(map);
     L.control.scale().addTo(map);
+//1
+map.locate({setView: true, maxZoom: 16});
 
- // Tambahkan kode ini setelah inisialisasi peta
-    const watermark = L.control({position: 'bottomleft'});
+map.on('locationfound', function(e) {
+  L.marker(e.latlng).addTo(map)
+    .bindPopup("Lokasi Anda").openPopup();
+});
+
+map.on('locationerror', function(e) {
+  alert("Tidak dapat menemukan lokasi.");
+});
+//1
+        const watermark = L.control({position: 'bottomleft'});
 
         watermark.onAdd = function(map) {
         const div = L.DomUtil.create('div', 'arahangin');
@@ -274,7 +219,10 @@
     };
 
     infoPanel.addTo(map);
+  </script>
+  <script src="https://unpkg.com/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
+<script>
+  var miniMap = new L.Control.MiniMap(osm.clone(), { toggleDisplay: true }).addTo(map);
 </script>
-
 </body>
 </html>

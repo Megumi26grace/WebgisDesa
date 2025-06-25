@@ -80,11 +80,8 @@
     <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
 
     <script>
-
-
-        var map = L.map('map').setView([-3.3476300515425685, 114.47057026684308], 15);
+        var map = L.map('map').setView([-3.3476300515425685, 114.47057026684308], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
 
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
@@ -127,7 +124,6 @@
                 });
             }
         });
-
     </script>
 </body>
 </html>
