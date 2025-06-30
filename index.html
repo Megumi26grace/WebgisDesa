@@ -45,7 +45,7 @@
             background: #eee;
         }
     </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-minimap/dist/Control.MiniMap.min.css" />
+
 </head>
 <body>
 
@@ -65,7 +65,6 @@
   <script>
     var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
     var osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png');
-    var stadia = L.tileLayer('https://tiles.stadiamaps.com/tiles/outdoors/{z}/{x}/{y}{r}.png');
     var esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
     var topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
 
@@ -78,9 +77,8 @@
     var baseLayers = {
       "OpenStreetMap": osm,
       "Humanitarian OSM": osmHot,
-      "Stadia Outdoors": stadia,
-      "Esri Satellite": esri,
-      "OpenTopoMap": topo
+      "Satellite": esri,
+      "Topografi": topo
     };
 
     var kondisiLayers = {
@@ -160,10 +158,7 @@ for (let i = 1; i <= 12; i++) {
           weight: 2,
           fillOpacity: 0.05
         },
-        onEachFeature: function (feature, layer) {
-          const nama = feature.properties.nama || `RT ${no}`;
-          layer.bindPopup(`<b>${nama}</b>`);
-        }
+          interactive: false
       }).addTo(map);
       batasRTLayers.push(layer);
     });
@@ -173,18 +168,7 @@ for (let i = 1; i <= 12; i++) {
 
     L.control.layers(baseLayers, kondisiLayers).addTo(map);
     L.control.scale().addTo(map);
-//1
-map.locate({setView: true, maxZoom: 16});
 
-map.on('locationfound', function(e) {
-  L.marker(e.latlng).addTo(map)
-    .bindPopup("Lokasi Anda").openPopup();
-});
-
-map.on('locationerror', function(e) {
-  alert("Tidak dapat menemukan lokasi.");
-});
-//1
         const watermark = L.control({position: 'bottomleft'});
 
         watermark.onAdd = function(map) {
@@ -211,10 +195,10 @@ map.on('locationerror', function(e) {
             <p>Selamat datang di peta Kondisi infrastruktur desa</p>
             <p>Kondisi Infrastruktur dibagi menjadi 5 kategori</p>
             <p>Hijau        = Baik</p>
-            <p>orange       = sedang</p>
-            <p>kuning       = rusak ringan</p>
-            <p>kuning gelap = rusak berat</p>
-            <p>Merah        = Tidak Layak</p>
+            <p>Kuning       = sedang</p>
+            <p>Orenge       = rusak ringan</p>
+            <p>Merah        = rusak berat</p>
+            <p>Hitam        = Tidak Layak</p>
         `;
     };
 
@@ -222,7 +206,6 @@ map.on('locationerror', function(e) {
   </script>
   <script src="https://unpkg.com/leaflet-minimap/dist/Control.MiniMap.min.js"></script>
 <script>
-  var miniMap = new L.Control.MiniMap(osm.clone(), { toggleDisplay: true }).addTo(map);
 </script>
 </body>
 </html>
