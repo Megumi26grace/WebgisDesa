@@ -158,7 +158,10 @@ for (let i = 1; i <= 12; i++) {
           weight: 2,
           fillOpacity: 0.05
         },
-          interactive: false
+            onEachFeature: function (feature, layer) {
+             const nama = feature.properties.nama || `RT ${no}`;
+             layer.bindPopup(`<b>${nama}</b>`);
+         }
       }).addTo(map);
       batasRTLayers.push(layer);
     });
